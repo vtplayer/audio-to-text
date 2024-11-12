@@ -1,0 +1,8 @@
+python-dotenv
+SpeechRecognition
+pydub
+pyannote.audio
+torch
+transformers
+soundfile
+tqdm

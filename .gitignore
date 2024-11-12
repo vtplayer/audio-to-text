@@ -1,0 +1,117 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+.project
+.classpath
+.settings/
+
+# Project specific
+logs/
+temp/
+temp_*/
+output/
+*.mp3
+*.wav
+*.txt
+!requirements.txt
+!README.txt
+
+# Logs
+*.log
+log/
+logs/
+
+# Data
+data/
+datasets/
+models/
+*.model
+*.pkl
+*.h5
+
+# SSL Certificates
+*.pem
+*.cert
+*.key
+
+# Cache
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.mypy_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Local development settings
+local_settings.py
+instance/
+
+# Database
+*.db
+*.sqlite3
+
+# Audio files
+*.mp3
+*.wav
+*.flac
+*.m4a
+*.aac
+
+# Documents and reports
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.csv
+!requirements.csv
+
+# Environment variables
+.env*
+!.env.example
+
+# Node modules (if using any JS tools)
+node_modules/
+package-lock.json
+yarn.lock
+
+# System Files
+.DS_Store
+Thumbs.db
