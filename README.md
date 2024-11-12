@@ -42,7 +42,7 @@ sudo apt install ffmpeg
 3. Tạo và kích hoạt môi trường ảo:
 ```bash
 # Tạo môi trường
-python3.9 -m venv venv
+python3 -m venv venv
 
 # Kích hoạt môi trường
 source venv/bin/activate  # Linux/macOS
@@ -52,18 +52,6 @@ venv\Scripts\activate     # Windows
 4. Cài đặt thư viện:
 ```bash
 pip install -r requirements.txt
-```
-
-## File requirements.txt
-```
-python-dotenv
-SpeechRecognition
-pydub
-pyannote.audio
-torch
-torchaudio
-transformers
-soundfile
 ```
 
 ## Cấu hình Hugging Face
@@ -82,16 +70,6 @@ soundfile
 ```bash
 # Tạo file .env
 echo "HUGGINGFACE_TOKEN=your_token_here" > .env
-```
-
-## Cấu trúc thư mục
-```
-.
-├── transcribe.py     # Script chính
-├── requirements.txt  # Danh sách thư viện
-├── .env             # Chứa token
-├── logs/            # Chứa log files
-└── temp/            # Thư mục tạm
 ```
 
 ## Sử dụng
