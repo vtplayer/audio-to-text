@@ -44,31 +44,10 @@ def suppress_warnings():
         category=RuntimeWarning,
         message=".*libmpg123.*"
     )
-    os.environ['MPG123_QUIET'] = '1'  # Tắt output từ mpg123
-
-def clean_mp3(audio_path, temp_dir):
-    """Làm sạch file MP3 trước khi xử lý"""
-    logger.info("Đang làm sạch file MP3...")
-    try:
-        # Tạo file tạm
-        temp_mp3 = temp_dir / "cleaned.mp3"
-        
-        # Sử dụng ffmpeg để tạo MP3 mới không có metadata
-        subprocess.run([
-            'ffmpeg', '-i', str(audio_path),
-            '-map_metadata', '-1',  # Xóa tất cả metadata
-            '-c:a', 'copy',  # Giữ nguyên audio codec
-            str(temp_mp3)
-        ], check=True, capture_output=True)
-        
-        logger.info("Làm sạch file MP3 thành công")
-        return str(temp_mp3)
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Lỗi khi làm sạch MP3: {e.stderr.decode()}")
-        return audio_path
-    except Exception as e:
-        logger.error(f"Lỗi không xác định khi làm sạch MP3: {str(e)}")
-        return audio_path
+    # Tắt output từ mpg123
+    os.environ['MPG123_QUIET'] = '1'
+    # Thêm biến môi trường để ẩn warning từ ID3
+    os.environ['SUPPRESS_ID3_WARNINGS'] = '1'
 
 def validate_token():
     """Kiểm tra token Hugging Face"""
@@ -88,7 +67,7 @@ def validate_token():
             "\nToken không hợp lệ! Token phải bắt đầu bằng 'hf_'\n"
             "Vui lòng kiểm tra lại token tại https://huggingface.co/settings/tokens"
         )
-    logger.debug(f"Token validation successful")
+    logger.debug("Token validation successful")
     return token
 
 def check_model_access():
@@ -154,6 +133,32 @@ def convert_timestamp(milliseconds):
     seconds = int(milliseconds / 1000)
     return str(datetime.timedelta(seconds=seconds))
 
+def clean_mp3(audio_path, temp_dir):
+    """Làm sạch file MP3 trước khi xử lý"""
+    logger.info("Đang làm sạch file MP3...")
+    try:
+        # Tạo file tạm
+        temp_mp3 = temp_dir / "cleaned.mp3"
+        
+        # Sử dụng ffmpeg để tạo MP3 mới không có metadata và comment
+        subprocess.run([
+            'ffmpeg', '-i', str(audio_path),
+            '-map_metadata', '-1',  # Xóa tất cả metadata
+            '-id3v2_version', '0',  # Loại bỏ ID3 tags
+            '-c:a', 'libmp3lame',  # Sử dụng MP3 encoder
+            '-q:a', '0',  # Chất lượng cao nhất
+            str(temp_mp3)
+        ], check=True, capture_output=True, stderr=subprocess.PIPE)
+        
+        logger.info("Làm sạch file MP3 thành công")
+        return str(temp_mp3)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Lỗi khi làm sạch MP3: {e.stderr.decode()}")
+        return audio_path
+    except Exception as e:
+        logger.error(f"Lỗi không xác định khi làm sạch MP3: {str(e)}")
+        return audio_path
+
 def optimize_audio(audio_path, temp_dir):
     """Tối ưu hóa audio"""
     logger.info("Bắt đầu tối ưu hóa audio...")
@@ -170,8 +175,10 @@ def optimize_audio(audio_path, temp_dir):
         temp_wav = temp_dir / "temp.wav"
         optimized_wav = temp_dir / "optimized.wav"
         
-        # Chuyển đổi sang WAV
-        audio = AudioSegment.from_mp3(audio_path)
+        # Chuyển đổi sang WAV với warning suppressed
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            audio = AudioSegment.from_mp3(audio_path)
         
         # Normalize audio
         logger.info("Đang normalize audio...")
@@ -225,11 +232,13 @@ def prepare_audio(audio_path, temp_dir):
         if audio_path.lower().endswith('.mp3'):
             audio_path = clean_mp3(audio_path, temp_dir)
         
-        # Optimize audio
+        # Optimize audio với các warning đã được suppress
         optimized_wav = optimize_audio(audio_path, temp_dir)
         
-        # Load optimized audio
-        audio = AudioSegment.from_wav(str(optimized_wav))
+        # Load optimized audio với các warning đã được suppress
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            audio = AudioSegment.from_wav(str(optimized_wav))
         
         logger.info("Chuẩn bị audio hoàn tất")
         return audio, optimized_wav
@@ -307,7 +316,8 @@ def transcribe_audio(audio_path, output_path=None):
                 warnings.simplefilter("ignore")
                 audio = AudioSegment.from_file(audio_path)
                 audio.export(str(temp_mp3), format='mp3', parameters=[
-                    '-map_metadata', '-1'  # Xóa metadata
+                    '-map_metadata', '-1',  # Xóa metadata
+                    '-id3v2_version', '0'   # Loại bỏ ID3 tags
                 ])
             audio_path = str(temp_mp3)
         
@@ -317,9 +327,11 @@ def transcribe_audio(audio_path, output_path=None):
         # Khởi tạo pipeline
         pipeline = setup_pipeline()
         
-        # Phân tích người nói
+        # Phân tích người nói với warning suppressed
         logger.info("Đang phân tích người nói...")
-        diarization = pipeline(audio_path)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            diarization = pipeline(audio_path)
         
         # Đếm số đoạn
         total_segments = len([_ for _ in diarization.itertracks(yield_label=True)])
@@ -345,10 +357,12 @@ def transcribe_audio(audio_path, output_path=None):
             temp_segment = temp_dir / "temp_segment.wav"
             segment.export(str(temp_segment), format="wav")
             
-            # Nhận dạng speech
+            # Nhận dạng speech với warning suppressed
             with sr.AudioFile(str(temp_segment)) as source:
-                segment_audio = recognizer.record(source)
-                text = transcribe_segment(segment_audio, recognizer)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    segment_audio = recognizer.record(source)
+                    text = transcribe_segment(segment_audio, recognizer)
                 
                 if text:
                     results.append({
